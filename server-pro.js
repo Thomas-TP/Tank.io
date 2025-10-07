@@ -1,0 +1,359 @@
+// ========================================
+// SERVEUR AUTHORITATIVE - Architecture Professionnelle
+// Le serveur est la seule autorité sur l'état du jeu
+// ========================================
+
+const express = require('express');
+const http = require('http');
+const socketIo = require('socket.io');
+
+const app = express();
+const server = http.createServer(app);
+const io = socketIo(server);
+
+app.use(express.static(__dirname));
+
+const waitingPlayers = [];
+const activeGames = new Map();
+
+class Game {
+    constructor(player1, player2) {
+        this.id = `game_${Date.now()}_${Math.random()}`;
+        this.players = {
+            player1: { socket: player1, lastProcessedInput: 0 },
+            player2: { socket: player2, lastProcessedInput: 0 }
+        };
+        
+        // État authoritatif du jeu (SEULE source de vérité)
+        this.state = {
+            player1: { x: 100, y: 300, angle: -Math.PI / 2, health: 6, speed: 2 },
+            player2: { x: 700, y: 300, angle: Math.PI / 2, health: 6, speed: 2 },
+            projectiles: [],
+            obstacles: [],
+            scores: { player1: 0, player2: 0 },
+            roundTimer: 180,
+            currentLevel: 1
+        };
+        
+        this.updateInterval = null;
+        this.timerInterval = null;
+        
+        player1.emit('matchFound', { gameId: this.id, playerNumber: 1, opponentId: player2.id });
+        player2.emit('matchFound', { gameId: this.id, playerNumber: 2, opponentId: player1.id });
+        
+        console.log(`✅ Match créé: ${player1.id} vs ${player2.id}`);
+    }
+    
+    startRound() {
+        this.generateObstacles();
+        
+        this.state.player1 = { x: 100, y: 300, angle: -Math.PI / 2, health: 6, speed: 2 };
+        this.state.player2 = { x: 700, y: 300, angle: Math.PI / 2, health: 6, speed: 2 };
+        this.state.projectiles = [];
+        this.state.roundTimer = 180;
+        
+        this.broadcast('roundStart', this.state);
+        
+        // Mettre à jour et broadcaster l'état 20 fois par seconde
+        if (this.updateInterval) clearInterval(this.updateInterval);
+        this.updateInterval = setInterval(() => this.update(), 50);
+        
+        // Timer
+        if (this.timerInterval) clearInterval(this.timerInterval);
+        this.timerInterval = setInterval(() => {
+            this.state.roundTimer--;
+            this.broadcast('timerUpdate', { timer: this.state.roundTimer });
+            
+            if (this.state.roundTimer <= 0) {
+                this.endRound('timeout');
+            }
+        }, 1000);
+    }
+    
+    generateObstacles() {
+        this.state.obstacles = [];
+        const count = 2 + this.state.currentLevel * 2;
+        
+        for (let i = 0; i < count; i++) {
+            const width = 50 + Math.random() * 50;
+            const height = 50 + Math.random() * 50;
+            const x = Math.random() * (800 - width - 200) + 100;
+            const y = Math.random() * (600 - height);
+            
+            this.state.obstacles.push({ x, y, width, height });
+        }
+    }
+    
+    update() {
+        // Mettre à jour les projectiles
+        for (let i = this.state.projectiles.length - 1; i >= 0; i--) {
+            const p = this.state.projectiles[i];
+            p.x += Math.sin(p.angle) * 8;
+            p.y += -Math.cos(p.angle) * 8;
+            
+            // Hors limites
+            if (p.x < 0 || p.x > 800 || p.y < 0 || p.y > 600) {
+                this.state.projectiles.splice(i, 1);
+                continue;
+            }
+            
+            // Collision avec obstacles
+            let hit = false;
+            for (const obs of this.state.obstacles) {
+                if (p.x > obs.x && p.x < obs.x + obs.width && 
+                    p.y > obs.y && p.y < obs.y + obs.height) {
+                    this.state.projectiles.splice(i, 1);
+                    hit = true;
+                    break;
+                }
+            }
+            if (hit) continue;
+            
+            // Collision avec joueurs
+            const target = p.ownerNum === 1 ? this.state.player2 : this.state.player1;
+            const targetNum = p.ownerNum === 1 ? 2 : 1;
+            const dx = p.x - target.x;
+            const dy = p.y - target.y;
+            
+            if (Math.sqrt(dx * dx + dy * dy) < 21) { // 42/2 = rayon tank
+                target.health -= 2;
+                this.state.projectiles.splice(i, 1);
+                
+                this.broadcast('playerHit', { 
+                    playerNum: targetNum, 
+                    health: target.health, 
+                    damage: 2 
+                });
+                
+                if (target.health <= 0) {
+                    const winnerNum = targetNum === 1 ? 2 : 1;
+                    const winnerKey = `player${winnerNum}`;
+                    this.state.scores[winnerKey]++;
+                    
+                    this.broadcast('playerDied', {
+                        victim: targetNum,
+                        winner: winnerNum,
+                        scores: this.state.scores
+                    });
+                    
+                    setTimeout(() => {
+                        if (this.state.scores.player1 + this.state.scores.player2 < 3) {
+                            this.startRound();
+                        } else {
+                            this.endGame();
+                        }
+                    }, 3000);
+                }
+            }
+        }
+        
+        // Broadcaster l'état complet
+        this.broadcastState();
+    }
+    
+    processInput(playerNum, input) {
+        const playerKey = `player${playerNum}`;
+        const player = this.state[playerKey];
+        
+        if (!player) return;
+        
+        // Mise à jour du dernier input traité
+        this.players[playerKey].lastProcessedInput = input.sequenceNumber;
+        
+        // Appliquer le mouvement (vérifications côté serveur)
+        const speed = player.speed;
+        
+        // Rotation (souris)
+        if (input.mouseAngle !== undefined) {
+            player.angle = input.mouseAngle;
+        }
+        
+        // Rotation clavier (PvP)
+        if (input.rotateLeft) player.angle -= 0.04;
+        if (input.rotateRight) player.angle += 0.04;
+        
+        // Mouvement
+        if (input.forward || input.backward) {
+            const moveX = Math.sin(player.angle) * speed;
+            const moveY = -Math.cos(player.angle) * speed;
+            
+            let newX = player.x;
+            let newY = player.y;
+            
+            if (input.forward) {
+                newX += moveX;
+                newY += moveY;
+            }
+            if (input.backward) {
+                newX -= moveX;
+                newY -= moveY;
+            }
+            
+            // Vérification collision serveur
+            if (!this.checkCollision(newX, newY, playerNum)) {
+                player.x = newX;
+                player.y = newY;
+            } else {
+                // Glissement
+                if (!this.checkCollision(newX, player.y, playerNum)) {
+                    player.x = newX;
+                } else if (!this.checkCollision(player.x, newY, playerNum)) {
+                    player.y = newY;
+                }
+            }
+        }
+        
+        // Tir
+        if (input.shoot) {
+            this.handleShoot(playerNum, player);
+        }
+    }
+    
+    checkCollision(x, y, playerNum) {
+        const TANK_WIDTH = 32;
+        const TANK_HEIGHT = 42;
+        
+        // Limites
+        if (x - TANK_WIDTH/2 < 0 || x + TANK_WIDTH/2 > 800 ||
+            y - TANK_HEIGHT/2 < 0 || y + TANK_HEIGHT/2 > 600) return true;
+        
+        // Obstacles
+        for (const obs of this.state.obstacles) {
+            if (x > obs.x - TANK_WIDTH/2 && x < obs.x + obs.width + TANK_WIDTH/2 &&
+                y > obs.y - TANK_HEIGHT/2 && y < obs.y + obs.height + TANK_HEIGHT/2) return true;
+        }
+        
+        return false;
+    }
+    
+    handleShoot(playerNum, player) {
+        const CANNON_LENGTH = 38;
+        const cannonX = player.x + Math.sin(player.angle) * CANNON_LENGTH;
+        const cannonY = player.y - Math.cos(player.angle) * CANNON_LENGTH;
+        
+        this.state.projectiles.push({
+            x: cannonX,
+            y: cannonY,
+            angle: player.angle,
+            ownerNum: playerNum,
+            id: `${playerNum}_${Date.now()}_${Math.random()}`
+        });
+    }
+    
+    broadcastState() {
+        const state1 = {
+            player1: this.state.player1,
+            player2: this.state.player2,
+            projectiles: this.state.projectiles,
+            lastProcessedInput: this.players.player1.lastProcessedInput
+        };
+        
+        const state2 = {
+            player1: this.state.player1,
+            player2: this.state.player2,
+            projectiles: this.state.projectiles,
+            lastProcessedInput: this.players.player2.lastProcessedInput
+        };
+        
+        this.players.player1.socket.emit('gameState', state1);
+        this.players.player2.socket.emit('gameState', state2);
+    }
+    
+    broadcast(event, data) {
+        this.players.player1.socket.emit(event, data);
+        this.players.player2.socket.emit(event, data);
+    }
+    
+    endRound(reason) {
+        if (this.timerInterval) clearInterval(this.timerInterval);
+        if (this.updateInterval) clearInterval(this.updateInterval);
+        this.broadcast('roundEnd', { reason, scores: this.state.scores });
+    }
+    
+    endGame() {
+        const winner = this.state.scores.player1 > this.state.scores.player2 ? 1 : 2;
+        this.broadcast('gameOver', { winner, scores: this.state.scores });
+        if (this.timerInterval) clearInterval(this.timerInterval);
+        if (this.updateInterval) clearInterval(this.updateInterval);
+        activeGames.delete(this.id);
+    }
+    
+    removePlayer(socket) {
+        this.broadcast('opponentDisconnected', {});
+        if (this.timerInterval) clearInterval(this.timerInterval);
+        if (this.updateInterval) clearInterval(this.updateInterval);
+        activeGames.delete(this.id);
+    }
+}
+
+io.on('connection', (socket) => {
+    console.log(`🔌 Joueur connecté: ${socket.id}`);
+    
+    socket.on('findMatch', () => {
+        console.log(`🔍 ${socket.id} cherche un match...`);
+        
+        if (waitingPlayers.length > 0) {
+            const opponent = waitingPlayers.shift();
+            const game = new Game(opponent, socket);
+            activeGames.set(game.id, game);
+            setTimeout(() => game.startRound(), 2000);
+        } else {
+            waitingPlayers.push(socket);
+            socket.emit('searching', { message: 'Recherche d\'un adversaire...' });
+            console.log(`⏳ ${socket.id} mis en attente`);
+        }
+    });
+    
+    socket.on('cancelSearch', () => {
+        const index = waitingPlayers.indexOf(socket);
+        if (index > -1) waitingPlayers.splice(index, 1);
+    });
+    
+    // Recevoir les inputs du joueur
+    socket.on('playerInput', (input) => {
+        const game = findGameBySocket(socket);
+        if (game) {
+            const playerNum = game.players.player1.socket === socket ? 1 : 2;
+            game.processInput(playerNum, input);
+        }
+    });
+    
+    socket.on('disconnect', () => {
+        console.log(`🔌 Joueur déconnecté: ${socket.id}`);
+        const waitIndex = waitingPlayers.indexOf(socket);
+        if (waitIndex > -1) waitingPlayers.splice(waitIndex, 1);
+        
+        const game = findGameBySocket(socket);
+        if (game) game.removePlayer(socket);
+    });
+});
+
+function findGameBySocket(socket) {
+    for (const [id, game] of activeGames) {
+        if (game.players.player1.socket === socket || game.players.player2.socket === socket) {
+            return game;
+        }
+    }
+    return null;
+}
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, '0.0.0.0', () => {
+    console.log('='.repeat(50));
+    console.log('🎮 SERVEUR TANK.IO PROFESSIONNEL');
+    console.log('Architecture: Client-Side Prediction + Server Authoritative');
+    console.log('='.repeat(50));
+    console.log(`✅ Serveur démarré sur le port ${PORT}`);
+    console.log(`📡 Adresse locale: http://localhost:${PORT}`);
+    
+    const os = require('os');
+    const interfaces = os.networkInterfaces();
+    for (const name of Object.keys(interfaces)) {
+        for (const iface of interfaces[name]) {
+            if (iface.family === 'IPv4' && !iface.internal) {
+                console.log(`🌐 Adresse LAN: http://${iface.address}:${PORT}`);
+            }
+        }
+    }
+    console.log('='.repeat(50));
+});

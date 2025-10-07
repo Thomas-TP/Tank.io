@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Tank.io - Guerre des Tanks</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>🎮 Tank.io</h1>
+    <div id="game-container">
+        <div id="ui">
+            <div id="player1-info" class="player-info">
+                <span id="player1-name">Joueur 1 (BLEU)</span>
+                <span id="player1-score" class="score">Score: 0</span>
+            </div>
+            <div id="game-info">
+                <div id="timer">Temps: 1:00</div>
+                <div id="level">Niveau: 1</div>
+                <div id="fps-counter" style="display: none;">FPS: 60</div>
+            </div>
+            <div id="player2-info" class="player-info">
+                <span id="player2-name">Joueur 2 (ROUGE)</span>
+                <span id="player2-score" class="score">Score: 0</span>
+            </div>
+        </div>
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        
+        <!-- CONTRÔLES TACTILES (Mobile) -->
+        <div id="touch-controls" style="display: none;">
+            <div id="joystick-container">
+                <div id="joystick-base"></div>
+                <div id="joystick-stick"></div>
+            </div>
+            <button id="shoot-button" class="touch-btn">💥</button>
+        </div>
+        
+        <!-- BOUTON PAUSE/MENU EN JEU -->
+        <div id="pause-button" style="display: none;">
+            <button class="pause-btn" id="pause-game-btn" title="Pause (ESC)">⏸️</button>
+        </div>
+        
+        <div id="message-overlay">
+            <p id="message-text"></p>
+        </div>
+
+        <!-- MENU PRINCIPAL -->
+        <div id="menu-screen">
+            <div class="menu-header">
+                <h1 class="menu-title">🎮 TANK.IO</h1>
+                <p class="menu-tagline">Combats de tanks épiques</p>
+            </div>
+            
+            <!-- User Info Corner (après connexion) -->
+            <div id="user-info-corner" style="display: none;">
+                <div class="user-badge">
+                    <span class="user-icon">👤</span>
+                    <span id="corner-username"></span>
+                </div>
+                <div class="user-quick-stats">
+                    <span>🏆 <strong id="corner-wins">0</strong></span>
+                    <span>💀 <strong id="corner-losses">0</strong></span>
+                </div>
+                <div class="user-actions">
+                    <button class="icon-btn" id="corner-stats-btn" title="Statistiques">📊</button>
+                    <button class="icon-btn" id="corner-logout-btn" title="Déconnexion">🚪</button>
+                </div>
+            </div>
+            
+            <div id="mode-selection" style="display: none;">
+                <div class="section-header">
+                    <span class="section-icon">🎮</span>
+                    <h3 class="menu-subtitle">Sélectionner le Mode de Jeu</h3>
+                </div>
+                <div class="mode-buttons">
+                    <button class="mode-button" id="mode-pvp">Joueur vs Joueur</button>
+                    <button class="mode-button" id="mode-ai">Joueur vs IA</button>
+                    <button class="mode-button mode-lan" id="mode-lan">🌐 Jouer en LAN</button>
+                </div>
+            </div>
+            
+            <div id="difficulty-selection" style="display: none;">
+                <div class="section-header">
+                    <span class="section-icon">🎯</span>
+                    <h3 class="menu-subtitle">Difficulté de l'IA</h3>
+                </div>
+                <div class="difficulty-buttons">
+                    <button class="difficulty-button" data-difficulty="easy">😊 Facile</button>
+                    <button class="difficulty-button" data-difficulty="medium">😐 Moyen</button>
+                    <button class="difficulty-button" data-difficulty="hard">😰 Difficile</button>
+                    <button class="difficulty-button difficulty-impossible" data-difficulty="impossible">💀 Imbattable</button>
+                </div>
+            </div>
+            
+            <div id="map-selection">
+                <div class="section-header">
+                    <span class="section-icon">🗺️</span>
+                    <h3 class="menu-subtitle">Sélectionner la Map</h3>
+                </div>
+                <div class="map-buttons">
+                    <button class="map-button selected" data-map="classic">🏛️ Classique</button>
+                    <button class="map-button" data-map="destructible">💥 Destructible</button>
+                    <button class="map-button" data-map="lava">🔥 Enfer de Lave</button>
+                    <button class="map-button" data-map="water">🌊 Archipel</button>
+                    <button class="map-button" data-map="portal">🌀 Portails</button>
+                    <button class="map-button" data-map="chaos">⚡ Chaos Total</button>
+                </div>
+            </div>
+            
+            <button id="start-button" style="display: none;">🚀 Démarrer la Partie</button>
+            
+            <div class="menu-controls">
+                <div class="controls-box">
+                    <p id="controls-text">⌨️ <strong>Contrôles:</strong> ZQSD (Déplacement) + ESPACE (Tir)</p>
+                    <p id="controls-mouse" style="display: none;">🖱️ <strong>Contrôles:</strong> ZS (Avancer/Reculer) + SOURIS (Viser & Tirer)</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- MODAL AUTHENTIFICATION -->
+        <div id="auth-modal" class="game-modal">
+            <div class="modal-backdrop"></div>
+            <div class="auth-modal-content">
+                <div class="modal-header">
+                    <h1 class="modal-title">🎮 TANK.IO</h1>
+                    <p class="modal-subtitle">Combats de tanks épiques</p>
+                </div>
+                
+                <!-- Login Form -->
+                <div id="login-form">
+                    <div class="disclaimer">
+                        <span class="disclaimer-icon">⚠️</span>
+                        <div>
+                            <strong>IMPORTANT</strong><br>
+                            N'utilisez PAS votre mot de passe personnel !<br>
+                            Stockage local non sécurisé.
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="username">👤 Pseudo</label>
+                        <input type="text" id="username" placeholder="Entrez votre pseudo (3-20 caractères)" maxlength="20" autocomplete="username" />
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="email">📧 Email <span class="optional">(optionnel)</span></label>
+                        <input type="email" id="email" placeholder="votre@email.com" maxlength="50" autocomplete="email" />
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="password">🔒 Mot de passe</label>
+                        <input type="password" id="password" placeholder="Mot de passe (4+ caractères)" autocomplete="current-password" />
+                    </div>
+                    
+                    <div class="auth-buttons">
+                        <button class="auth-btn primary" id="login-btn">
+                            <span class="btn-icon">🔓</span>
+                            <span>Se connecter</span>
+                        </button>
+                        <button class="auth-btn secondary" id="register-btn">
+                            <span class="btn-icon">✨</span>
+                            <span>S'inscrire</span>
+                        </button>
+                    </div>
+                    
+                    <div class="divider">
+                        <span>OU</span>
+                    </div>
+                    
+                    <button class="auth-btn guest" id="guest-mode">
+                        <span class="btn-icon">👤</span>
+                        <span>Continuer en mode invité</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- MODAL STATISTIQUES -->
+        <div id="stats-modal" style="display: none;">
+            <div class="modal-content">
+                <h2>📊 Statistiques de <span id="stats-username"></span></h2>
+                <button class="close-modal" id="close-stats">✖</button>
+                
+                <div class="stats-section">
+                    <h3>🏆 Résumé Général</h3>
+                    <p>Victoires: <strong id="stats-wins">0</strong></p>
+                    <p>Défaites: <strong id="stats-losses">0</strong></p>
+                    <p>Ratio V/D: <strong id="stats-ratio">0.00</strong></p>
+                    <p>Meilleur Score: <strong id="stats-best">0</strong></p>
+                    <p>Score Total: <strong id="stats-total">0</strong></p>
+                </div>
+                
+                <div class="stats-section">
+                    <h3>📜 Historique des Parties (10 dernières)</h3>
+                    <div id="match-history"></div>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+
+    <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+    <script src="ai-pro.js"></script>
+    <script src="multiplayer.js"></script>
+    <script src="account-system.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
