@@ -2,10 +2,10 @@
   "name": "tank-io-multiplayer",
   "version": "1.0.0",
   "description": "Tank.IO - Jeu multijoueur LAN avec auto-matchmaking",
-  "main": "server.js",
+  "main": "server/server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js"
+    "start": "node server/server.js",
+    "dev": "nodemon server/server.js"
   },
   "keywords": ["game", "multiplayer", "tank", "lan"],
   "author": "",

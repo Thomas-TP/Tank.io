@@ -379,8 +379,33 @@ accounts.json (Base de données)
 
 Pour une documentation technique complète, consultez :
 
-- 📄 [MULTI_DEVICE_UPDATE.md](MULTI_DEVICE_UPDATE.md) - Guide multi-appareils et API
-- 📄 [MOBILE_FEATURES.md](MOBILE_FEATURES.md) - Fonctionnalités mobiles et optimisations
+- 📄 [STRUCTURE.md](STRUCTURE.md) - **Structure du projet et organisation des fichiers**
+- 📄 [GUIDE_HACKMD.md](docs/GUIDE_HACKMD.md) - Guide complet avec illustrations
+- 📄 [MULTI_DEVICE_UPDATE.md](docs/MULTI_DEVICE_UPDATE.md) - Guide multi-appareils et API
+- 📄 [MOBILE_FEATURES.md](docs/MOBILE_FEATURES.md) - Fonctionnalités mobiles et optimisations
+- 📄 [ARCHITECTURE-PRO.md](docs/ARCHITECTURE-PRO.md) - Architecture technique détaillée
+- 📄 [MAPS.md](docs/MAPS.md) - Documentation des 6 maps
+- 📄 [POWERUPS.md](docs/POWERUPS.md) - Documentation des power-ups
+
+### 📁 Structure du Projet
+
+```
+tank.io/
+├── public/              # Client-side (navigateur)
+│   ├── css/            # Styles
+│   ├── js/             # Scripts JavaScript
+│   │   ├── ai/         # Intelligence artificielle
+│   │   └── network/    # Multijoueur Socket.IO
+│   └── index.html      # Page principale
+├── server/             # Back-end Node.js
+│   ├── server.js       # Serveur Express + Socket.IO
+│   └── accounts.json   # Base de données
+├── docs/               # Documentation
+│   └── archive/        # Anciennes versions
+└── node_modules/       # Dépendances npm
+```
+
+**Voir [STRUCTURE.md](STRUCTURE.md) pour plus de détails**
 
 ### API REST Endpoints
 
