@@ -257,9 +257,9 @@ class Game {
         
         this.broadcast('roundStart', this.state);
         
-        // Mettre à jour et broadcaster l'état 20 fois par seconde
+        // Mettre à jour et broadcaster l'état 40 fois par seconde (plus fluide pour projectiles)
         if (this.updateInterval) clearInterval(this.updateInterval);
-        this.updateInterval = setInterval(() => this.update(), 50);
+        this.updateInterval = setInterval(() => this.update(), 25);
         
         // Timer
         if (this.timerInterval) clearInterval(this.timerInterval);
