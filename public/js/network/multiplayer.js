@@ -313,6 +313,19 @@ class MultiplayerClient {
                 proj.id = serverProj.id;
                 projectiles.push(proj);
                 
+                // Créer les effets visuels comme en mode local
+                const cannonEndX = serverProj.x;
+                const cannonEndY = serverProj.y;
+                
+                // Son de tir
+                playSound('shoot');
+                
+                // Particules de tir (comme en mode local)
+                for (let i = 0; i < 15; i++) {
+                    particles.push(new Particle(cannonEndX, cannonEndY, Math.random() * 3 + 1, '#FFFF00', 0.9, (Math.random() - 0.5) * 5, (Math.random() - 0.5) * 5));
+                }
+                triggerScreenShake(3, 10);
+                
                 // Initialiser état d'interpolation
                 this.projectileStates.set(serverProj.id, {
                     current: { x: serverProj.x, y: serverProj.y },
@@ -326,6 +339,15 @@ class MultiplayerClient {
         // Supprimer projectiles qui n'existent plus côté serveur
         for (let i = projectiles.length - 1; i >= 0; i--) {
             if (!serverIds.has(projectiles[i].id)) {
+                // Créer une explosion à la position du projectile détruit
+                const proj = projectiles[i];
+                const state = this.projectileStates.get(proj.id);
+                if (state) {
+                    // Explosion selon le type de destruction (blanc = limite écran, marron = obstacle, couleur projectile = joueur)
+                    let explosionColor = proj.color; // Par défaut explosion couleur du projectile
+                    createExplosion(state.target.x, state.target.y, explosionColor);
+                }
+                
                 this.projectileStates.delete(projectiles[i].id);
                 projectiles.splice(i, 1);
             }
