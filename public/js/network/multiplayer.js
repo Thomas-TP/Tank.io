@@ -334,29 +334,15 @@ class MultiplayerClient {
     
     interpolateProjectiles() {
         const now = Date.now();
-        const lerpSpeed = 0.8; // Vitesse d'interpolation augmentée pour suivre les projectiles plus rapides
+        const lerpSpeed = 1.0; // Snap direct pour projectiles rapides (pas d'interpolation)
         
         for (const proj of projectiles) {
             const state = this.projectileStates.get(proj.id);
             if (!state) continue;
             
-            // Interpolation linéaire vers la cible serveur
-            const dx = state.target.x - state.current.x;
-            const dy = state.target.y - state.current.y;
-            
-            // Si très proche de la cible, snapper directement
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < 1) {
-                state.current.x = state.target.x;
-                state.current.y = state.target.y;
-            } else {
-                state.current.x += dx * lerpSpeed;
-                state.current.y += dy * lerpSpeed;
-            }
-            
-            // Appliquer au projectile
-            proj.x = state.current.x;
-            proj.y = state.current.y;
+            // Snap direct à la position serveur (pas d'interpolation pour projectiles rapides)
+            proj.x = state.target.x;
+            proj.y = state.target.y;
             proj.angle = state.angle;
         }
     }
