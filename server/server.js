@@ -291,8 +291,8 @@ class Game {
         // Mettre à jour les projectiles
         for (let i = this.state.projectiles.length - 1; i >= 0; i--) {
             const p = this.state.projectiles[i];
-            p.x += Math.sin(p.angle) * 8;
-            p.y += -Math.cos(p.angle) * 8;
+            p.x += Math.sin(p.angle) * 10;
+            p.y += -Math.cos(p.angle) * 10;
             
             // Hors limites
             if (p.x < 0 || p.x > 800 || p.y < 0 || p.y > 600) {
