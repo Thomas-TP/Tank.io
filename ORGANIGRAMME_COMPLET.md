@@ -86,11 +86,11 @@ graph TD
         U1 --> AA1[Player Sync]
         U1 --> BB1[Authoritative Logic]
 
-        W1 --> CC1[/api/register]
-        W1 --> DD1[/api/login]
-        W1 --> EE1[/api/verify-session]
-        W1 --> FF1[/api/logout]
-        W1 --> GG1[/api/update-stats]
+        W1 --> CC1["/api/register"]
+        W1 --> DD1["/api/login"]
+        W1 --> EE1["/api/verify-session"]
+        W1 --> FF1["/api/logout"]
+        W1 --> GG1["/api/update-stats"]
     end
 
     subgraph "💾 Database"
@@ -192,7 +192,7 @@ graph TD
         CC --> FF[Responsive Design]
         DD --> GG[150px Radius]
         DD --> HH[360° Movement]
-        FF --> II[@media queries]
+        FF --> II[media queries]
         FF --> JJ[900px breakpoint]
         FF --> KK[600px breakpoint]
     end
@@ -331,6 +331,7 @@ graph LR
 
 ## 📊 Métriques & Statistiques
 
+### Répartition du Code Source
 ```mermaid
 pie title "Répartition du Code Source"
     "JavaScript Client" : 75
@@ -338,7 +339,10 @@ pie title "Répartition du Code Source"
     "HTML" : 5
     "CSS" : 3
     "JSON/Config" : 2
+```
 
+### Fonctionnalités Principales
+```mermaid
 pie title "Fonctionnalités Principales"
     "Gameplay Core" : 40
     "AI System" : 20
@@ -346,7 +350,10 @@ pie title "Fonctionnalités Principales"
     "Mobile Support" : 10
     "Account System" : 10
     "UI/UX" : 5
+```
 
+### Maps Distribution
+```mermaid
 pie title "Maps Distribution"
     "Classic" : 20
     "Destructible" : 18
