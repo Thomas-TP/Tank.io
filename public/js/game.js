@@ -59,7 +59,7 @@ const TANK_WIDTH = 32;
 const TANK_HEIGHT = 42;
 const CANNON_LENGTH = 38;
 const CANNON_WIDTH = 8;
-const PROJECTILE_SPEED = 12;
+const PROJECTILE_SPEED = 16;
 const PROJECTILE_RADIUS = 5;
 const ROUND_TIME = 180; // 3 minutes = 180 secondes
 const SHOOT_COOLDOWN = 60;
