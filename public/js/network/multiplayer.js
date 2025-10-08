@@ -334,7 +334,7 @@ class MultiplayerClient {
     
     interpolateProjectiles() {
         const now = Date.now();
-        const lerpSpeed = 0.5; // Vitesse d'interpolation augmentée pour plus de fluidité
+        const lerpSpeed = 0.8; // Vitesse d'interpolation augmentée pour suivre les projectiles plus rapides
         
         for (const proj of projectiles) {
             const state = this.projectileStates.get(proj.id);
