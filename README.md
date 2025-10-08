@@ -379,7 +379,8 @@ accounts.json (Base de données)
 
 Pour une documentation technique complète, consultez :
 
-- 📄 [STRUCTURE.md](STRUCTURE.md) - **Structure du projet et organisation des fichiers**
+- 📄 [ORGANIGRAMME_COMPLET.md](ORGANIGRAMME_COMPLET.md) - **Organigramme visuel complet avec diagrammes Mermaid**
+- 📄 [STRUCTURE.md](STRUCTURE.md) - Structure du projet et organisation des fichiers
 - 📄 [GUIDE_HACKMD.md](docs/GUIDE_HACKMD.md) - Guide complet avec illustrations
 - 📄 [MULTI_DEVICE_UPDATE.md](docs/MULTI_DEVICE_UPDATE.md) - Guide multi-appareils et API
 - 📄 [MOBILE_FEATURES.md](docs/MOBILE_FEATURES.md) - Fonctionnalités mobiles et optimisations
